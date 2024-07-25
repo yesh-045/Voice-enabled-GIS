@@ -1,0 +1,15 @@
+zoom in
+zoom out
+pan left
+pan right
+pan up 
+pan down
+show satellite
+show base map
+clear map
+reset view
+reset map
+pin location
+go to
+measure distance
+
