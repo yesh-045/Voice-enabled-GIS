@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Enabled GIS</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #map {
+            height: 500px;
+            width: 80%;
+            border-radius: 20px;
+            border: 2px solid black;
+        }
+        #mic {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 2rem;
+            font-size: 2rem;
+            width: 35px;
+            height: 35px;
+            background-color: rgb(24, 143, 255);
+            color: white;
+            border-radius: 50%;
+        }
+        #status {
+            text-align: center;
+            padding: 10px; 
+            font-size: 2rem;
+            margin-top: 10px;
+            color: black;
+            height: 50px;
+            width: 800px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="map"></div>
+        <div id="mic">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mic-fill" viewBox="0 0 16 16">
+                <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0z"/>
+                <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
+            </svg>
+        </div>
+        <div id="status">Ask Sarathy</div>
+    </div>
+    
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-control-custom"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6"></script>
+    <script src="static/VoiceControl.js"></script>
+    <script>
+        // Initialize the map
+        var map = L.map('map', {
+            worldCopyJump: true,
+            maxBounds: [
+                [-90, -180],
+                [90, 180]
+            ]
+        }).setView([20, 0], 2);
+
+        VoiceControl(map);
+        
+        var baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+    </script>
+</body>
+</html>
