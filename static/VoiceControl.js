@@ -3,7 +3,7 @@ function VoiceControl(map) {
     const satelliteLayer = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}');
     const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    const mic = document.getElementById('mic');
+    const micButton = document.getElementById('mic');
     const statusElement = document.getElementById('status');
     let mediaRecorder;
 
@@ -24,11 +24,12 @@ function VoiceControl(map) {
         { name: 'reset view', phrases: ['reset view', 'reset map', 'go to world view'], action: () => { map.setView([0, 0], 2); updateStatus('View reset'); } },
         { name: 'reset map', phrases: ['reset map', 'reset view', 'go to world view'], action: resetMap },
         { name: 'pin location', phrases: ['pin location', 'add marker', 'mark this place'], action: pinCurrentLocation },
-        { name: 'measure area', phrases: ['measure area', 'calculate area', 'get area'], action: measureArea },
+       
     ];
 
-  
-    mic.addEventListener('click', toggleRecording);
+
+
+    micButton.addEventListener('click', toggleRecording);
 
     function toggleRecording() {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -80,7 +81,6 @@ function VoiceControl(map) {
             return;
         }
 
-        // Handle special commands
         if (transcription.includes('go to') || transcription.includes('navigate to')) {
             const location = transcription.replace(/go to|navigate to/gi, '').trim();
             if (location) {
@@ -247,9 +247,6 @@ function VoiceControl(map) {
 
     function clearFeatures() {
         featureGroup.clearLayers();
-        currentPolygon = null;
-        polygonPoints = [];
-        map.off('click', addPolygonPoint);
         if (currentDistanceLine) {
             map.removeLayer(currentDistanceLine);
             currentDistanceLine = null;
