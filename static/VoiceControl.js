@@ -26,15 +26,23 @@ function VoiceControl(map) {
         { name: 'pin location', phrases: ['pin location', 'add marker', 'mark this place'], action: pinCurrentLocation },
     ];
 
-    micButton.addEventListener('click', toggleRecording);
+ 
+    mic.addEventListener('click', toggleRecording);
+    document.addEventListener("keydown" , function(e){
+        if(e.key === "Enter"){
+            toggleRecording();
+        }
+    })
 
     function toggleRecording() {
         if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
-            micButton.textContent = 'Start Listening';
+            document.getElementById("mic").style.backgroundColor = "rgb(24,143,255)";
+            statusElement.textContent = 'Start Listening';
             updateStatus('Processing...');
         } else {
             startRecording();
+            
         }
     }
 
@@ -42,8 +50,8 @@ function VoiceControl(map) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-
-            const audioChunks = [];
+            
+            let audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks);
@@ -51,17 +59,19 @@ function VoiceControl(map) {
                 formData.append('audio', audioBlob, 'audio.wav');
 
                 try {
-                    const response = await fetch('/transcribe', { method: 'POST', body: formData });
+                    const response = await fetch('http://127.0.0.1:5000/transcribe', { method: 'POST', body: formData });
                     if (!response.ok) throw new Error('Transcription failed');
                     const { transcription } = await response.json();
                     handleCommand(transcription.toLowerCase());
                 } catch (error) {
+                    //Erro happens here
                     updateStatus(`Error: ${error.message}`);
                 }
             };
 
             mediaRecorder.start();
-            micButton.textContent = 'Stop Listening';
+            statusElement.textContent = 'Stop Listening';
+            document.getElementById("mic").style.backgroundColor = "orangered";
             updateStatus('Listening...');
         } catch (error) {
             updateStatus(`Microphone error: ${error.message}`);
