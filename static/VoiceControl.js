@@ -24,10 +24,7 @@ function VoiceControl(map) {
         { name: 'reset view', phrases: ['reset view', 'reset map', 'go to world view'], action: () => { map.setView([0, 0], 2); updateStatus('View reset'); } },
         { name: 'reset map', phrases: ['reset map', 'reset view', 'go to world view'], action: resetMap },
         { name: 'pin location', phrases: ['pin location', 'add marker', 'mark this place'], action: pinCurrentLocation },
-       
     ];
-
-
 
     micButton.addEventListener('click', toggleRecording);
 
@@ -45,7 +42,7 @@ function VoiceControl(map) {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
-            
+
             const audioChunks = [];
             mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
             mediaRecorder.onstop = async () => {
@@ -74,14 +71,25 @@ function VoiceControl(map) {
     function handleCommand(transcription) {
         updateStatus(`Recognized: ${transcription}`);
 
-        // Check for best matching command
         const bestMatch = findBestMatch(transcription);
         if (bestMatch) {
             bestMatch.action();
             return;
         }
 
-        if (transcription.includes('go to') || transcription.includes('navigate to')) {
+        if (transcription.includes('hello') || transcription.includes('hi')) {
+            speak("Hello! How can I assist you with the map today?");
+        } else if (transcription.includes('thank you') || transcription.includes('thanks')) {
+            speak("You're welcome! Is there anything else I can help you with?");
+        } else if (transcription.includes('what can you do')) {
+            speak("I can help you navigate the map, find locations, measure distances, and control map views. Just ask me what you'd like to do!");
+        
+        }
+        if (transcription.includes('help') || transcription.includes('what can you do')) {
+            provideHelp();
+        }
+
+        else if (transcription.includes('go to') || transcription.includes('navigate to')) {
             const location = transcription.replace(/go to|navigate to/gi, '').trim();
             if (location) {
                 navigateToLocation(location);
@@ -95,7 +103,20 @@ function VoiceControl(map) {
             } else {
                 updateStatus('Could not understand the locations for distance measurement. Please try again.');
             }
-        } else {
+        } else if (transcription.includes('what\'s the weather in')) {
+            const location = transcription.replace('what\'s the weather in', '').trim();
+            getWeatherForLocation(location).then(weather => {
+                speak(`The weather in ${location} is ${weather.description} with a temperature of ${weather.temperature}°C`);
+            });
+        } 
+        else if (transcription.includes('find route from') && transcription.includes('to')) {
+            const match = transcription.match(/find route from (.+) to (.+)/i);
+            if (match) {
+                findRoute(match[2], match[1]);
+            } else {
+                speak("I couldn't understand the route request. Please try again.");
+            }}
+        else {
             updateStatus('Command not recognized. Please try again.');
         }
     }
@@ -164,8 +185,10 @@ function VoiceControl(map) {
             L.marker([coords.latitude, coords.longitude]).addTo(featureGroup)
                 .bindPopup(location).openPopup();
             updateStatus(`Navigated to ${location}`);
+            speak('Navigated to ${location}');
         } else {
             updateStatus(`Could not find location: ${location}`);
+            speak(`Could not find location: ${location}`);
         }
     }
 
@@ -179,18 +202,20 @@ function VoiceControl(map) {
             const from = turf.point([point1.longitude, point1.latitude]);
             const to = turf.point([point2.longitude, point2.latitude]);
             const distance = turf.distance(from, to, { units: 'kilometers' });
-            
+
             currentDistanceLine = L.polyline([
                 [point1.latitude, point1.longitude],
                 [point2.latitude, point2.longitude]
             ], { color: 'red' }).addTo(featureGroup);
-            
+
             currentDistanceLine.bindPopup(`Distance: ${distance.toFixed(2)} km`).openPopup();
-            
+
             map.fitBounds(currentDistanceLine.getBounds(), { padding: [50, 50] });
-            updateStatus(`Distance: ${distance.toFixed(2)} km`);
+            updateStatus(`Distance: ${distance.toFixed(2)} km. Would you like me to suggest a route between these locations?`);
+            speak(`The distance is ${distance.toFixed(2)} km. Would you like me to suggest a route between these locations?`);
         } else {
             updateStatus('Could not find one or both locations');
+            speak('Could not find one or both locations');
         }
     }
 
@@ -215,10 +240,12 @@ function VoiceControl(map) {
     function toggleSatellite() {
         if (map.hasLayer(satelliteLayer)) {
             updateStatus('Already in satellite view');
+            speak('Already in satellite view');
         } else {
             map.removeLayer(baseLayer);
             map.addLayer(satelliteLayer);
             updateStatus('Switched to satellite view');
+            speak('Switched to satellite view');
         }
     }
 
@@ -242,7 +269,8 @@ function VoiceControl(map) {
         const center = map.getCenter();
         L.marker(center).addTo(featureGroup)
             .bindPopup('Pinned Location').openPopup();
-        updateStatus('Location pinned at map center');
+        updateStatus("I've pinned this location. Would you like me to find nearby points of interest?");
+        speak("I've pinned this location. Would you like me to find nearby points of interest?");
     }
 
     function clearFeatures() {
@@ -251,13 +279,51 @@ function VoiceControl(map) {
             map.removeLayer(currentDistanceLine);
             currentDistanceLine = null;
         }
-    
         updateStatus('All features cleared from the map');
     }
-    
 
     function updateStatus(message) {
         statusElement.textContent = message;
-        console.log(message); // For debugging
+        console.log(message);
     }
+
+    async function getWeatherForLocation(location) {
+// weather api
+    }
+    
+
+    async function findRoute(destination, origin) {
+        try {
+            updateStatus(`Finding route from ${origin} to ${destination}...`);
+            const [startCoords, endCoords] = await Promise.all([getLatLong(origin), getLatLong(destination)]);
+            if (startCoords && endCoords) {
+                const routeResponse = await fetch(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=apikey&start=${startCoords.longitude},${startCoords.latitude}&end=${endCoords.longitude},${endCoords.latitude}`);
+                if (!routeResponse.ok) throw new Error('Route request failed');
+                const routeData = await routeResponse.json();
+                const routeCoordinates = routeData.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                const routeLine = L.polyline(routeCoordinates, { color: 'blue' }).addTo(featureGroup);
+    
+                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+                updateStatus(`Route found from ${origin} to ${destination}`);
+                speak(`Here is the route from ${origin} to ${destination}`);
+            } else {
+                updateStatus('Could not find one or both locations for the route');
+            }
+        } catch (error) {
+            updateStatus(`Route error: ${error.message}`);
+        }
+    }
+    function provideHelp() {
+    speak("Here are some things you can ask me: 'Go to' or 'Navigate to' a place, 'Measure distance between' two places, 'What's the weather in' a place, 'Find route from' one place 'to' another, 'Tell me about this area', or 'Zoom to my location'. You can also ask me to zoom in, zoom out, pan the map, or switch between satellite and base map views.");
 }
+    function speak(message) {
+        const utterance = new SpeechSynthesisUtterance(message);
+        window.speechSynthesis.speak(utterance);
+        updateStatus(message);
+    }
+   
+}
+
+// Initialize the map and voice control
+const map = L.map('map');
+const voiceControl = new VoiceControl(map);
