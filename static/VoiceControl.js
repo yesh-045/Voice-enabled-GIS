@@ -334,6 +334,4 @@ function VoiceControl(map) {
    
 }
 
-// Initialize the map and voice control
-const map = L.map('map');
-const voiceControl = new VoiceControl(map);
+
